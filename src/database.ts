@@ -41,8 +41,9 @@ async function dbGetAllGameStats(steamID:string) {
     if (!gamesDB.has(steamID)) return false;
     return gamesDB.get(steamID)
 }
-export async function dbGetGameStats(steamID:string, gameID:string) {
-    
+export function dbUserTracksGame(steamID:string, gameID:string) {
+    const userGames = gamesDB.get(steamID);
+    return gameID in userGames;
 }
 export async function dbSaveGameStats(steamID:string, gameID:string, gameStats:any) {
     const oldUserGames = gamesDB.get(steamID);
@@ -54,7 +55,6 @@ export async function dbUserOwnsGame(steamID:string, gameID:string) {
     if(!gamesDB.has(steamID)) return false;
     const hasGame = gamesDB.get(steamID)[gameID]
     return hasGame ? hasGame : false;
-    
 }
 
 export async function dbUpdateAllGames(gameData:AppBase[]) {
@@ -62,6 +62,7 @@ export async function dbUpdateAllGames(gameData:AppBase[]) {
     allGamesDB.deleteAll();
     allGamesDB.set("games", gameData); //* in the future, remove games with type dlc
     console.log("Done updating all games.");
+    allGamesDB.sync();
 }
 export async function dbGetGameID(gameName:string) {
     console.log("Finding game: " + gameName);
@@ -71,8 +72,8 @@ export async function dbGetGameID(gameName:string) {
     return match;
 }
 export function dbGamesEmpty(): boolean {
-    const arrLen = Object.keys(usersDB.JSON()).length;
-    return arrLen <= 1;
+    const test = !allGamesDB.has("games");
+    return test;
 }
 
 function bestDistanceGame(target:string, arr:AppBase[]) {

@@ -1,7 +1,7 @@
 import { CommandInteraction, ModalSubmitInteraction, SlashCommandBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import SteamAPI, { AppBase } from 'steamapi';
 import dotenv from "dotenv";
-import { dbSaveUser, dbGetUserFromSteam, dbGetSteamIDFromDiscord, dbSaveGameStats, dbUserOwnsGame, dbUpdateAllGames, dbGamesEmpty, dbGetGameID } from "../database";
+import { dbSaveUser, dbGetUserFromSteam, dbUserTracksGame, dbGetSteamIDFromDiscord, dbSaveGameStats, dbUserOwnsGame, dbUpdateAllGames, dbGamesEmpty, dbGetGameID } from "../database";
 
 dotenv.config();
 const STEAM_KEY = process.env.STEAM_KEY as string;
@@ -57,6 +57,12 @@ export async function responseModal(interaction: ModalSubmitInteraction) {
         response = `Game **${steamGame}** not found, please try to match a phrase in the title`;
         return interaction.editReply(response);
     }
+
+    if (dbUserTracksGame(steamID, gameInfo!.id.toString())) {
+        response = `**${gameInfo!.name}** is already being tracked for ${usernameString}`;
+        return interaction.editReply(response);
+    }
+
     // get details about the game
     const gameDetails = await getUserGameStats(steamID, gameInfo!.id, steam);
     if (gameDetails) {
@@ -150,8 +156,9 @@ async function getAppId(gameName: string, steam:SteamAPI) {
     
     //const re = new RegExp(`\"appid\":(\d+)[^{}]*\"name\":\"([^\"]*${gameName}[^\"]*)\"`, "gm"); // IF you needed to go through the raw string
     const res = await steam.getAppList();
-    if (dbGamesEmpty())
+    if (dbGamesEmpty()) {
         await dbUpdateAllGames(res);
+    }
 
     var match = await dbGetGameID(gameName)
 
@@ -167,7 +174,6 @@ async function userOwnsGame(steamID:string, gameID:number, steam:SteamAPI) {
 
     try {
         const res = await steam.getUserOwnedGames(steamID);
-
         const result = res.find(obj => {
             return obj["game"]["id"] === gameID
         });
@@ -190,8 +196,7 @@ async function getUserGameStats(steamID:string, gameID:number, steam:SteamAPI) {
             gameName: res.game,
             minutes: gameDetails.minutes,
             lastPlayed: gameDetails.lastPlayedTimestamp,
-            type: gameDetails.type,
-            stats: res.stats ? res.stats : []
+            //stats: res.stats ? res.stats : []
         }
         // save to db
         await dbSaveGameStats(steamID, gameID.toString(), model);
