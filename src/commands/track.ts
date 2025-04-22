@@ -18,20 +18,25 @@ export async function execute(interaction: CommandInteraction) {
 
 export async function responseModal(interaction: ModalSubmitInteraction) {
     interaction.deferReply();
+    var response = ""
     const steamID = interaction.fields.getTextInputValue('steamID_input')
     const steamGame = interaction.fields.getTextInputValue('game_input')
     const steam = new SteamAPI(STEAM_KEY);
     // TODO: check steam api to find the user. Store this in a database
     const gameInfo = await getAppId(steamGame, steam);
+    if (gameInfo!.id < 0) {
+        response = `Game '${steamGame}' not found, please try to match a phrase in the title`;
+        return interaction.editReply(response);
+    }
+    const gameDetails = await checkGame(steamID, gameInfo!.id, steam);
 
-    var res = ""
-    if (gameInfo!.id >= 0) {
-        res = `'${gameInfo?.name}' is now being tracked for user ${steamID}`
+    if (gameDetails) {
+        response = `'${gameInfo?.name}' is now being tracked for user ${steamID}`
     } else {
-        res = `Game '${steamGame}' not found, please try to match a phrase in the title`;
+        response = `User ${steamID} does not own '${gameInfo?.name}'`;
     }
 
-    return interaction.editReply(res);
+    return interaction.editReply(response);
 }
 
 async function createModelForm(interaction: CommandInteraction) {
@@ -79,6 +84,17 @@ async function getAppId(gameName: string, steam:SteamAPI) {
     //if (gameInfo.type == "dlc") return;
 
     return match;
+}
+
+// returns if the user owns the game, and returns the game info if so.
+async function checkGame(steamID:string, gameID:number, steam:SteamAPI) {
+    if (!steamID || !gameID) return;
+    const res = await steam.getUserOwnedGames(steamID);
+
+    const result = res.find(obj => {
+        return obj["game"]["id"] === gameID
+    });
+    return result
 }
 
 function bestDistanceGame(target:string, arr:AppBase[]) {
