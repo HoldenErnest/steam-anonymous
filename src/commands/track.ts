@@ -173,7 +173,7 @@ async function userOwnsGame(steamID:string, gameID:number, steam:SteamAPI) {
         });
         return result;
     } catch (e) {
-
+        console.error((e as Error).name);
     }
     return false;
 }
@@ -197,6 +197,7 @@ async function getUserGameStats(steamID:string, gameID:number, steam:SteamAPI) {
         await dbSaveGameStats(steamID, gameID.toString(), model);
         return model;
     } catch (e) {
+        console.error(e);
         return false;
     }
     

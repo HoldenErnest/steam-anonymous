@@ -71,7 +71,8 @@ export async function dbGetGameID(gameName:string) {
     return match;
 }
 export function dbGamesEmpty(): boolean {
-    return Object.keys(usersDB.JSON()).length < 1;
+    const arrLen = Object.keys(usersDB.JSON()).length;
+    return arrLen <= 1;
 }
 
 function bestDistanceGame(target:string, arr:AppBase[]) {
@@ -80,6 +81,7 @@ function bestDistanceGame(target:string, arr:AppBase[]) {
         distance: 10, // Change this for minimum distance
         id: -1
     }
+    if (!arr) return match;
     target = target.toLowerCase()
 
     arr.forEach((game) => {
