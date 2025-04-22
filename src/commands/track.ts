@@ -1,7 +1,7 @@
 import { CommandInteraction, ModalSubmitInteraction, SlashCommandBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import SteamAPI, { AppBase } from 'steamapi';
 import dotenv from "dotenv";
-import { distance } from "closest-match";
+import { dbSaveUser, dbGetUserFromSteam, dbGetSteamIDFromDiscord, dbSaveGameStats, dbUserOwnsGame, dbUpdateAllGames, dbGamesEmpty, dbGetGameID } from "../database";
 
 dotenv.config();
 const STEAM_KEY = process.env.STEAM_KEY as string;
@@ -13,12 +13,28 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     var user = interaction.user.displayName;
-    const targetUser = interaction.options.get("user")?.user?.username;
+    const targetID = interaction.options.get("user")?.user?.id;
+    const targetUser = interaction.options.get("user")?.user?.displayName;
 
     if (targetUser) {
-        //TODO: send targetuser to databse
+        createForm(interaction, targetUser, targetID);
+        return;
     }
-    createModelForm(interaction);
+    createForm(interaction);
+}
+
+export async function responseModalAddID(interaction: ModalSubmitInteraction) {
+    await interaction.deferReply();
+    var response = ""
+    const steamID = interaction.fields.getTextInputValue('steamID_input')
+    const discordUser = interaction.fields.getTextInputValue('username_input')
+    const steam = new SteamAPI(STEAM_KEY);
+    const userData = await saveUser(steamID, discordUser, steam);
+    if (userData) {
+        await interaction.editReply(`<@${discordUser}> is now associated with an ID.`);
+    } else {
+        await interaction.editReply(`Could not find the Steam ID: ${steamID}`);
+    }
 }
 
 export async function responseModal(interaction: ModalSubmitInteraction) {
@@ -27,13 +43,14 @@ export async function responseModal(interaction: ModalSubmitInteraction) {
     const steamID = interaction.fields.getTextInputValue('steamID_input')
     const steamGame = interaction.fields.getTextInputValue('game_input')
     const steam = new SteamAPI(STEAM_KEY);
-    // check user
+
+    // find user from ID
     const userData = await getSteamUserData(steamID, steam);
     if (!userData) {
         response = `User not found with ID: ${steamID}`;
         return interaction.editReply(response);
     }
-    const usernameString = `[${userData.nickname}](${userData.profileURL})`
+    const usernameString = `[${userData.steamUser}](${userData.steamURL})`
     // get app id from name
     const gameInfo = await getAppId(steamGame, steam);
     if (gameInfo!.id < 0) {
@@ -41,7 +58,7 @@ export async function responseModal(interaction: ModalSubmitInteraction) {
         return interaction.editReply(response);
     }
     // get details about the game
-    const gameDetails = await userOwnsGame(steamID, gameInfo!.id, steam);
+    const gameDetails = await getUserGameStats(steamID, gameInfo!.id, steam);
     if (gameDetails) {
         response = `**${gameInfo?.name}** is now being tracked for ${usernameString}`
     } else {
@@ -51,29 +68,41 @@ export async function responseModal(interaction: ModalSubmitInteraction) {
     return interaction.editReply(response);
 }
 
-async function createModelForm(interaction: CommandInteraction) {
-    
+async function createForm(interaction: CommandInteraction, discordName?:string, discordID?:string) {
+    var preText = "";
+    var title = "Track a game";
+    if (discordName) {
+        const steamID = await dbGetSteamIDFromDiscord(discordID!);
+        if (steamID) { // if user in database
+            preText = steamID.toString();
+            title = `Tracking: ${discordName}`;
+        } else {
+            return await createIDForm(interaction, discordName!, discordID!);
+        }
+    }
+
     const modal = new ModalBuilder()
-        .setCustomId('steamTrack')
-        .setTitle('Track a Game');
+        .setCustomId('trackID')
+        .setTitle(title);
 
-    const favoriteColorInput = new TextInputBuilder()
+    const steamIDInput = new TextInputBuilder()
         .setCustomId('steamID_input')
-        // The label is the prompt the user sees for this input
         .setLabel("Steam ID: ")
-        // Short means only a single line of text
-        .setStyle(TextInputStyle.Short);
+        .setPlaceholder('Enter a Steam ID..')
+        .setValue(preText)
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-    const hobbiesInput = new TextInputBuilder()
+    const gameInput = new TextInputBuilder()
         .setCustomId('game_input')
-        .setLabel("Game to track: ")
-        // Paragraph means multiple lines of text.
-        .setStyle(TextInputStyle.Paragraph);
-
-    // An action row only holds one text input,
-    // so you need one action row per text input.
-    const firstActionRow = new ActionRowBuilder().addComponents(favoriteColorInput);
-    const secondActionRow = new ActionRowBuilder().addComponents(hobbiesInput);
+        .setLabel("Game: ")
+        .setPlaceholder('Enter a game to track..')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+    
+    // add fields to modal
+    const firstActionRow = new ActionRowBuilder().addComponents(steamIDInput);
+    const secondActionRow = new ActionRowBuilder().addComponents(gameInput);
 
     // Add inputs to the modal
     // @ts-ignore
@@ -82,59 +111,119 @@ async function createModelForm(interaction: CommandInteraction) {
     // Show the modal to the user
     await interaction.showModal(modal);
 }
+async function createIDForm(interaction: CommandInteraction, discordName:string, discordID:string) {
+    var preName = discordID;
+    var title = `Assign ID: ${discordName}`;
 
+    const modal = new ModalBuilder()
+        .setCustomId('trackAdd')
+        .setTitle(title);
+
+    const steamIDInput = new TextInputBuilder()
+        .setCustomId('username_input')
+        .setLabel("Discord ID: ")
+        .setPlaceholder('Enter a discord user..')
+        .setValue(preName)
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+    const gameInput = new TextInputBuilder()
+        .setCustomId('steamID_input')
+        .setLabel("Steam ID: ")
+        .setPlaceholder('Enter a Steam ID..')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+    
+    // add fields to modal
+    const firstActionRow = new ActionRowBuilder().addComponents(steamIDInput);
+    const secondActionRow = new ActionRowBuilder().addComponents(gameInput);
+
+    // Add inputs to the modal
+    // @ts-ignore
+    modal.addComponents(firstActionRow, secondActionRow); //! I dont know why these are red!
+
+    // Show the modal to the user
+    await interaction.showModal(modal);
+}
 async function getAppId(gameName: string, steam:SteamAPI) {
     if (!gameName) return;
     
     //const re = new RegExp(`\"appid\":(\d+)[^{}]*\"name\":\"([^\"]*${gameName}[^\"]*)\"`, "gm"); // IF you needed to go through the raw string
     const res = await steam.getAppList();
+    if (dbGamesEmpty())
+        await dbUpdateAllGames(res);
 
-    var match = bestDistanceGame(gameName, res)
-
-    //TODO: make sure its not dlc? if it is I dont know what to do
-    //var gameInfo = await steam.getGameDetails(match.id)
-    //if (gameInfo.type == "dlc") return;
+    var match = await dbGetGameID(gameName)
 
     return match;
 }
 
-// returns if the user owns the game, and returns the game info if so.
+// returns if the user owns the game, and returns the detailed game info if so.
 async function userOwnsGame(steamID:string, gameID:number, steam:SteamAPI) {
     if (!steamID || !gameID) return;
-    const res = await steam.getUserOwnedGames(steamID);
+    
+    const dbOwns = await dbUserOwnsGame(steamID, gameID.toString());
+    if (dbOwns) return dbOwns;
 
-    const result = res.find(obj => {
-        return obj["game"]["id"] === gameID
-    });
-    return result
+    try {
+        const res = await steam.getUserOwnedGames(steamID);
+
+        const result = res.find(obj => {
+            return obj["game"]["id"] === gameID
+        });
+        return result;
+    } catch (e) {
+
+    }
+    return false;
 }
-async function getSteamUserData(steamID:string, steam:SteamAPI) {
+// returns the game stats object for a specific user.
+async function getUserGameStats(steamID:string, gameID:number, steam:SteamAPI) {
+    if (!steamID || !gameID) return;
+    const gameDetails = await userOwnsGame(steamID, gameID, steam);
+    if (!gameDetails) return false;
+
+    try {
+        const res = await steam.getUserStats(steamID, gameID);
+
+        const model = {
+            gameName: res.game,
+            minutes: gameDetails.minutes,
+            lastPlayed: gameDetails.lastPlayedTimestamp,
+            type: gameDetails.type,
+            stats: res.stats ? res.stats : []
+        }
+        // save to db
+        await dbSaveGameStats(steamID, gameID.toString(), model);
+        return model;
+    } catch (e) {
+        return false;
+    }
+    
+}
+// returns the user data from an ID
+async function getSteamUserData(steamID:string, steam:SteamAPI, discordUser?:string) {
     if (!Number(steamID)) return false;
+    
+    // check if user in the db
+    const gameDetails = await dbGetUserFromSteam(steamID);
+    if (gameDetails && !discordUser) return gameDetails;
+
     try {
         const data = await steam.getUserSummary(steamID);
-        return data;
+        const model = {
+            steamUser: data.nickname,
+            steamURL: data.profileURL,
+            discordUser: discordUser!
+        }
+
+        await dbSaveUser(steamID, model.steamUser, model.discordUser, model.steamURL);
+        return model;
     } catch (e){
         return false;
     }
     
 }
-
-function bestDistanceGame(target:string, arr:AppBase[]) {
-    var match = {
-        name: "",
-        id: -1,
-        distance: 10 // Change this for minimum distance
-    }
-    target = target.toLowerCase()
-
-    arr.forEach((game) => {
-        var d = distance(target,game.name.toLowerCase());
-        if (d < match.distance) {
-            // update the new closest match
-            match.distance = d;
-            match.name = game.name;
-            match.id = game.appid;
-        }
-    });
-    return match;
+async function saveUser(steamID:string, discordUser:string, steam:SteamAPI) {
+    return await getSteamUserData(steamID, steam, discordUser);
 }

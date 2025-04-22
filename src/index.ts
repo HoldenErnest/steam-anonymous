@@ -18,8 +18,10 @@ client.on("guildCreate", async (guild) => {
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isModalSubmit()) {
-    if (interaction.customId == "steamTrack")
+    if (interaction.customId.startsWith("trackID"))
       commands["track"].responseModal(interaction);
+    else if (interaction.customId.startsWith("trackAdd"))
+      commands["track"].responseModalAddID(interaction);
   }
   if (!interaction.isCommand()) {
     return;
