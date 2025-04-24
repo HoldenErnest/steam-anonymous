@@ -8,6 +8,7 @@ import { distance } from "closest-match";
 const usersDB = new JSONdb("./database/users.json"); // stores the IDs of users
 const gamesDB = new JSONdb("./database/games.json"); // stores the IDs of games
 const allGamesDB = new JSONdb("./database/allGames.json"); // stores whatever tracked games each user has
+const guildsDB = new JSONdb("./database/guilds.json"); // assign channels to each guild
 
 //discordUser, steamID, gameID are all unique
 
@@ -81,6 +82,17 @@ export async function dbUntrackUsersGame(steamID:string, gameID:string) {
 export function dbGamesEmpty(): boolean {
     const test = !allGamesDB.has("games");
     return test;
+}
+
+// GUILD SAVING
+export async function dbSetGuildChannel(guildID:string, channelID:string) {
+    guildsDB.set(guildID, channelID);
+}
+export async function dbGetGuildChannel(guildID:string) {
+    return guildsDB.get(guildID);
+}
+export async function getAllGuilds() {
+    return guildsDB.JSON();
 }
 
 function bestDistanceGame(target:string, arr:AppBase[]) {
