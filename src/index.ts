@@ -2,6 +2,7 @@ import { Client } from "discord.js";
 import { config } from "./config";
 import { commands } from "./commands";
 import { deployCommands } from "./deploy-commands";
+import * as Modals from "./modals"
 
 const client = new Client({
   intents: ["Guilds", "GuildMessages", "DirectMessages"],
@@ -18,10 +19,12 @@ client.on("guildCreate", async (guild) => {
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isModalSubmit()) {
-    if (interaction.customId.startsWith("trackID"))
-      commands["track"].responseModal(interaction);
-    else if (interaction.customId.startsWith("trackAdd"))
-      commands["track"].responseModalAddID(interaction);
+    if (interaction.customId == "trackID")
+      commands["track"].trackGameResponse(interaction);
+    else if (interaction.customId == "untrackID")
+      commands["untrack"].untrackGameResponse(interaction);
+    else if (interaction.customId == "trackAssign")
+      Modals.assignUserResponse(interaction);
   }
   if (!interaction.isCommand()) {
     return;

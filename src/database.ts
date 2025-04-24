@@ -11,7 +11,7 @@ const allGamesDB = new JSONdb("./database/allGames.json"); // stores whatever tr
 
 //discordUser, steamID, gameID are all unique
 
-export async function dbSaveUser(steamID:string, steamUser:string, discordUser:string, steamURL:string) {
+export async function dbSaveUser(steamID:string, steamUser:string, discordUser?:string, steamURL?:string) {
     if (!usersDB.has(steamID)) {
         usersDB.set(steamID, {steamUser, discordUser, steamURL});
     }
@@ -28,7 +28,7 @@ export async function dbGetUserFromSteam(steamID:string) {
     if(!usersDB.has(steamID)) return false;
     return usersDB.get(steamID);
 }
-export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<string | boolean> {
+export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<string | false> {
     var theKey;
     for (var key in usersDB.JSON()) {
         const dUser = usersDB.get(key)["discordUser"];
@@ -70,6 +70,13 @@ export async function dbGetGameID(gameName:string) {
     console.log("Found game: " + match.name);
 
     return match;
+}
+export async function dbUntrackUsersGame(steamID:string, gameID:string) {
+    const oldGames = gamesDB.get(steamID);
+    if (oldGames.hasOwnProperty(gameID)) {
+        delete oldGames[gameID];
+        gamesDB.set(steamID, oldGames);
+    }
 }
 export function dbGamesEmpty(): boolean {
     const test = !allGamesDB.has("games");

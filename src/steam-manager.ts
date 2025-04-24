@@ -1,0 +1,123 @@
+// Holden Ernest - 4/24/2025
+// interface between the database and the commands with access to steam information
+
+import SteamAPI, { AppBase } from 'steamapi';
+import dotenv from "dotenv";
+import * as DB from "./database";
+
+dotenv.config();
+const STEAM_KEY = process.env.STEAM_KEY as string;
+const Steam = new SteamAPI(STEAM_KEY);
+
+
+export async function getSteamIDFromDiscord(discordID:string): Promise<string | false> {
+    return DB.dbGetSteamIDFromDiscord(discordID);
+}
+
+// Get the user info from a Steam ID, (pass in a discord ID to assign it to this user)
+//* SAVES
+export async function getSteamUserData(steamID:string, discordID?:string) {
+	if (!Number(steamID)) return false;
+	
+	// check if user in the db
+	const gameDetails = await DB.dbGetUserFromSteam(steamID);
+	if (gameDetails) {
+		// if you didnt specify a discord user
+		if (!discordID || ( discordID && gameDetails.discordUser != ""))
+			return gameDetails;
+		//if you did speficiy a discord user and its currently empty, it needs to be saved
+	}
+
+	// if its not already in the database, get the stats then save it to the database
+	try {
+		const data = await Steam.getUserSummary(steamID);
+		const model = {
+			steamUser: data.nickname,
+			steamURL: data.profileURL,
+			discordUser: discordID
+		}
+
+		await DB.dbSaveUser(steamID, model.steamUser, model.discordUser, model.steamURL);
+		return model;
+	} catch (e){
+		return false;
+	}
+}
+
+// getSteamUserData inherently saves.
+//* SAVES
+export async function saveUser(steamID:string, discordUser:string) {
+	return await getSteamUserData(steamID, discordUser);
+}
+
+// get a Steam App ID based off the closest match to the game name
+export async function getAppId(gameName: string) {
+	if (!gameName) return;
+	//const re = new RegExp(`\"appid\":(\d+)[^{}]*\"name\":\"([^\"]*${gameName}[^\"]*)\"`, "gm"); // IF you needed to go through the raw string
+	
+	await tryUpdateAllGames();
+	var match = await DB.dbGetGameID(gameName)
+	return match;
+}
+
+// Is this user currently tracking this game
+export function userTracksGame(steamID:string, gameInfo:string): boolean {
+	return DB.dbUserTracksGame(steamID, gameInfo);
+}
+
+// returns the game stats object for a specific user
+//* SAVES
+export async function getUserGameStats(steamID:string, gameID:number) {
+    if (!steamID || !gameID) return;
+    const gameDetails = await userOwnsGame(steamID, gameID);
+    if (!gameDetails) return false;
+
+    try {
+        const res = await Steam.getUserStats(steamID, gameID);
+
+        const model = {
+            gameName: res.game,
+            minutes: gameDetails.minutes,
+            lastPlayed: gameDetails.lastPlayedTimestamp,
+            //stats: res.stats ? res.stats : []
+        }
+        // save to db
+        await DB.dbSaveGameStats(steamID, gameID.toString(), model);
+        return model;
+    } catch (e) {
+        console.error(e);
+        return false;
+    }
+    
+}
+
+// returns if the user owns the game, and returns the detailed game info if so.
+async function userOwnsGame(steamID:string, gameID:number) {
+    if (!steamID || !gameID) return;
+    
+    const dbOwns = await DB.dbUserOwnsGame(steamID, gameID.toString());
+    if (dbOwns) return dbOwns;
+
+    try {
+        const res = await Steam.getUserOwnedGames(steamID);
+        const result = res.find(obj => {
+            return obj["game"]["id"] === gameID
+        });
+        return result;
+    } catch (e) {
+        console.error((e as Error).name);
+    }
+    return false;
+}
+
+async function tryUpdateAllGames() {
+	//TODO: make some kind of update scheduled update so the 'all games' list is up to date
+	if (DB.dbGamesEmpty()) {
+		const res = await Steam.getAppList();
+		await DB.dbUpdateAllGames(res);
+	}
+}
+
+export async function untrackUsersGame(steamID:string, gameID:string) {
+	DB.dbUntrackUsersGame(steamID,gameID);
+}
