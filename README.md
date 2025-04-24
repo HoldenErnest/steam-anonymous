@@ -1,16 +1,26 @@
 # Steam Anonymous
 
-A discord bot that uses the Steam API to track registered users and hand out "chips" representing how long they were away from certain games
+A Discord Bot that uses the Steam API to track registered users and hand out "chips" representing how long they were away from certain games. Dont fall back to old habbits, youre better than League.
+
+## Commands
+`/ping` - Test the conectivity of the bot
+`/track` - Setup a tracker on a game for a specific steam user
+`/track @user` - Attach a Steam ID to a user for ease of use. Future uses will fill out the Steam ID automatically
+`/untrack` - Remove a tracker on a game for a specific steam user
+`/untrack @user` - Remove a tracker on a game for the specified user (must have /track @user setup)
+
+<hr>
 
 ## Setup (UNTESTED)
 
- - clone this repository
- - go into the folder and run `npm i`
- - create a .env file and set the `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, and `STEAM_KEY`
+ - Clone this repository
+ - In the directory run `$ npm i`
+ - Create a .env file and set the `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, and `STEAM_KEY`
 
  ## Run
 
- - run `npm run dev`
+ - `$ npm run dev`
+<hr>
 
  ## Images
 
