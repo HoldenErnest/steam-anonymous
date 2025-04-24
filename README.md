@@ -4,9 +4,13 @@ A Discord Bot that uses the Steam API to track registered users and hand out "ch
 
 ## Commands
 `/ping` - Test the conectivity of the bot
+
 `/track` - Setup a tracker on a game for a specific steam user
+
 `/track @user` - Attach a Steam ID to a user for ease of use. Future uses will fill out the Steam ID automatically
+
 `/untrack` - Remove a tracker on a game for a specific steam user
+
 `/untrack @user` - Remove a tracker on a game for the specified user (must have /track @user setup)
 
 <hr>
