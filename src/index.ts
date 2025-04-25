@@ -51,3 +51,8 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(config.DISCORD_TOKEN);
+
+// vomits*
+export async function tryUpdateChannel(channel:string) {
+	Messenger.updateChannel(client, channel);
+}

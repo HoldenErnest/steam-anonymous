@@ -3,6 +3,7 @@
 
 import { CommandInteraction, ChannelType, GuildBasedChannel, Client } from "discord.js"
 import * as DB from "./database"
+import { tryUpdateChannel } from "./index"
 
 var channels:GuildBasedChannel[] = [];
 
@@ -31,21 +32,34 @@ export async function sendMessageToChannel(channel:GuildBasedChannel, message:st
     }
 }
 
-export function subscribeChannel(guildID:string, channel?:GuildBasedChannel) {
+export async function subscribeChannel(guildID:string, channel?:GuildBasedChannel|string) {
     if (!channel) {
-        console.error("Problem adding channel. Does server not have Text Channels?");
+        console.error("No channel was specified");
         return;
     }
-    DB.dbSetGuildChannel(guildID, channel.id);
-    channels.push(channel);
+    const channelID = typeof channel == "string" ? channel : channel.id;
+    DB.dbSetGuildChannel(guildID, channelID);
+
+    await tryUpdateChannel(channelID);
 }
 
 export async function updateChannels(client:Client<boolean>) {
     const allGuilds = Object.values(await DB.getAllGuilds());
-
+    channels = [];
     allGuilds.forEach(channelID => {
         console.log("adding channel: " + channelID);
         const channel = client.channels.cache.get(channelID);
         channels.push(channel as GuildBasedChannel);
+    });
+}
+// calling index.tryUpdateChannel will come here with client
+export async function updateChannel(client:Client<boolean>, channelID:string) {
+    removeActiveChannel(channelID);
+    const channel = client.channels.cache.get(channelID);
+    channels.push(channel as GuildBasedChannel);
+}
+function removeActiveChannel(channelID:string) {
+    channels = channels.filter(c => {
+        return c.id !== channelID;
     });
 }
