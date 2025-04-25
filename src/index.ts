@@ -4,6 +4,7 @@ import { commands } from "./commands";
 import { deployCommands } from "./deploy-commands";
 import * as Modals from "./modals"
 import * as Messenger from "./messenger"
+import * as schedule from "./scheduler"
 
 const client = new Client({
 	intents: ["Guilds", "GuildMessages", "DirectMessages"],
@@ -12,6 +13,7 @@ const client = new Client({
 client.once("ready", () => {
 	console.log("[START] Bot ready.");
 	Messenger.updateChannels(client);
+	schedule.scheduleChips();
 });
 
 client.on("guildCreate", async (guild) => {

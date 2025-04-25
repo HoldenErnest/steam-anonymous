@@ -30,5 +30,5 @@ A Discord Bot that uses the Steam API to track registered users and hand out "ch
 
  ## Images
 
-![test1](./img/steamA%20test.png)
-![test2](./img/steamA%20test2.png)
+![test1](./img/notes/steamA%20test.png)
+![test2](./img/notes/steamA%20test2.png)

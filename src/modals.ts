@@ -46,7 +46,11 @@ export async function createTrackingForm(interaction: CommandInteraction, tracki
     modal.addComponents(firstActionRow, secondActionRow); //! I dont know why these are red!
 
     // Show the modal to the user
-    await interaction.showModal(modal);
+    try {
+        await interaction.showModal(modal);
+    } catch (e) {
+        console.error("crying");
+    }
 }
 
 export async function createAssignForm(interaction: CommandInteraction, discordName:string, discordID:string) {
@@ -81,7 +85,11 @@ export async function createAssignForm(interaction: CommandInteraction, discordN
     modal.addComponents(firstActionRow, secondActionRow); //! I dont know why these are red!
 
     // Show the modal to the user
-    await interaction.showModal(modal);
+    try {
+        await interaction.showModal(modal);
+    } catch (e) {
+        console.error("crying");
+    }
 }
 
 // assign represents if you want to assign the ID or remove the ID

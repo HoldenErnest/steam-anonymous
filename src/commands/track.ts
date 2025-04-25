@@ -50,10 +50,24 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
 
     // get details about the game
     const gameDetails = await SteamManager.getUserGameStats(guildID, steamID, gameInfo!.id);
-    if (gameDetails) {
-        response = `**${gameInfo?.name}** is now being tracked for ${usernameString}`
+    if (gameDetails.hasOwnProperty("code")) {
+        //@ts-ignore
+        switch (gameDetails.code) {
+            case 0:
+                response = `${usernameString} does not own **'${gameInfo?.name}'**`;
+                break;
+            case 1:
+                response = `${usernameString} has a private profile`;
+                break;
+            case 4:
+                response = `API Error getting stats for ${usernameString}`;
+                break;
+            default:
+                response = `Problem fetching user info :(`;
+                break;
+        }
     } else {
-        response = `${usernameString} does not own **'${gameInfo?.name}'**`;
+        response = `**${gameInfo?.name}** is now being tracked for ${usernameString}`
     }
 
     return interaction.editReply(response);

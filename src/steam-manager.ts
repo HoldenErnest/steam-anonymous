@@ -36,6 +36,9 @@ export async function getSteamUserData(steamID:string, discordID?:string) {
 			steamURL: data.profileURL,
 			discordUser: discordID
 		}
+		//console.log("large: " + data.avatar.large);
+		//console.log("med: " + data.avatar.medium); /// LAST WORKING ON USER PFP
+		//console.log("smal: " + data.avatar.small);
 
 		await DB.dbSaveUser(steamID, model.steamUser, model.discordUser, model.steamURL);
 		return model;
@@ -68,9 +71,9 @@ export function userTracksGame(guildID:string, steamID:string, gameInfo:string):
 // returns the game stats object for a specific user
 //* SAVES
 export async function getUserGameStats(guildID:string, steamID:string, gameID:number) {
-    if (!steamID || !gameID) return;
+    if (!steamID || !gameID) return {code:-1};
     const gameDetails = await userOwnsGame(guildID, steamID, gameID);
-    if (!gameDetails) return false;
+    if (!gameDetails) return {code:0};
 
     try {
         const res = await Steam.getUserStats(steamID, gameID);
@@ -79,16 +82,19 @@ export async function getUserGameStats(guildID:string, steamID:string, gameID:nu
             gameName: res.game,
             minutes: gameDetails.minutes,
             lastPlayed: gameDetails.lastPlayedTimestamp,
+			iconURL: gameDetails.game.logoURL,
             //stats: res.stats ? res.stats : []
         }
+
         // save to db
         await DB.dbSaveGameStats(guildID, steamID, gameID.toString(), model);
         return model;
     } catch (e) {
-        console.error(e);
-        return false;
+		const er = (e as Error).message.toLowerCase();
+		if (er.startsWith("forbidden")) return {code:1}
+        
     }
-    
+    return {code:4};
 }
 
 // returns if the user owns the game, and returns the detailed game info if so.
@@ -120,4 +126,24 @@ async function tryUpdateAllGames() {
 
 export async function untrackUsersGame(guildID:string, steamID:string, gameID:string) {
 	DB.dbUntrackUsersGame(guildID, steamID,gameID);
+}
+
+export type GameChanges = {
+	name: "",
+	id: -1,
+	timeDelta: 0, // difference between this gameStat and last gameStat
+	totalTime: 0, // if this game has a higher total, you should be more weary of the time change
+	lastPlayed: 0
+}
+
+// given a list of game IDs, go through recent games and track 
+export async function getMatchingRecentGames(steamID:string) {
+	const recentGames = await Steam.getUserRecentGames(steamID);
+	recentGames.forEach(async (g) => {
+		const icon = g.game.icon;
+		const iconURL = g.game.iconURL;
+		console.log("icon: " + icon);
+		console.log("iconURL: " + iconURL);
+	});
+	
 }

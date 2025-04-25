@@ -19,6 +19,7 @@
     "steamapi": "^3.1.1"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
     "@types/request": "^2.48.12",
     "tsup": "^8.4.0",
     "tsx": "^4.19.3",
