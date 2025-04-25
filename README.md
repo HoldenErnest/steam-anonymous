@@ -13,6 +13,8 @@ A Discord Bot that uses the Steam API to track registered users and hand out "ch
 
 `/untrack @user` - Remove a tracker on a game for the specified user (must have /track @user setup)
 
+`/subscribe` - Subscribe your Guild to the current channel, all future messages will be sent here
+
 <hr>
 
 ## Setup (UNTESTED)
