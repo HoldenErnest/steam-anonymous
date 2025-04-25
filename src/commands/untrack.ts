@@ -29,6 +29,7 @@ export async function untrackGameResponse(interaction: ModalSubmitInteraction) {
 	var response = ""
 	const steamID = interaction.fields.getTextInputValue('steamID_input')
 	const steamGame = interaction.fields.getTextInputValue('game_input')
+	const guildID = interaction.guildId!;
 
 	// find user from ID
 	const userData = await SteamManager.getSteamUserData(steamID);
@@ -45,11 +46,11 @@ export async function untrackGameResponse(interaction: ModalSubmitInteraction) {
 		return interaction.editReply(response);
 	}
 
-	if (SteamManager.userTracksGame(steamID, gameInfo!.id.toString())) {
-		SteamManager.untrackUsersGame(steamID, gameInfo!.id.toString());
+	if (SteamManager.userTracksGame(guildID, steamID, gameInfo!.id.toString())) {
+		SteamManager.untrackUsersGame(guildID, steamID, gameInfo!.id.toString());
 		response = `**${gameInfo!.name}** is no longer being tracked for ${usernameString}`;
 	} else {
-		response = `**${gameInfo!.name}** is not being tracked for ${usernameString}`;
+		response = `**${gameInfo!.name}** was never being tracked for ${usernameString}`;
 	}
 
 	return interaction.editReply(response);

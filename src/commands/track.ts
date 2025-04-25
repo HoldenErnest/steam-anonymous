@@ -27,7 +27,8 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
     var response = ""
     const steamID = interaction.fields.getTextInputValue('steamID_input')
     const steamGame = interaction.fields.getTextInputValue('game_input')
-
+    const guildID = interaction.guildId!;
+    
     // find user from ID
     const userData = await SteamManager.getSteamUserData(steamID);
     if (!userData) {
@@ -42,13 +43,13 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
         return interaction.editReply(response);
     }
 
-    if (SteamManager.userTracksGame(steamID, gameInfo!.id.toString())) {
+    if (SteamManager.userTracksGame(guildID, steamID, gameInfo!.id.toString())) {
         response = `**${gameInfo!.name}** is already being tracked for ${usernameString}`;
         return interaction.editReply(response);
     }
 
     // get details about the game
-    const gameDetails = await SteamManager.getUserGameStats(steamID, gameInfo!.id);
+    const gameDetails = await SteamManager.getUserGameStats(guildID, steamID, gameInfo!.id);
     if (gameDetails) {
         response = `**${gameInfo?.name}** is now being tracked for ${usernameString}`
     } else {

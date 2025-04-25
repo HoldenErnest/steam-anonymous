@@ -61,15 +61,15 @@ export async function getAppId(gameName: string) {
 }
 
 // Is this user currently tracking this game
-export function userTracksGame(steamID:string, gameInfo:string): boolean {
-	return DB.dbUserTracksGame(steamID, gameInfo);
+export function userTracksGame(guildID:string, steamID:string, gameInfo:string): boolean {
+	return DB.dbUserTracksGame(guildID, steamID, gameInfo);
 }
 
 // returns the game stats object for a specific user
 //* SAVES
-export async function getUserGameStats(steamID:string, gameID:number) {
+export async function getUserGameStats(guildID:string, steamID:string, gameID:number) {
     if (!steamID || !gameID) return;
-    const gameDetails = await userOwnsGame(steamID, gameID);
+    const gameDetails = await userOwnsGame(guildID, steamID, gameID);
     if (!gameDetails) return false;
 
     try {
@@ -82,7 +82,7 @@ export async function getUserGameStats(steamID:string, gameID:number) {
             //stats: res.stats ? res.stats : []
         }
         // save to db
-        await DB.dbSaveGameStats(steamID, gameID.toString(), model);
+        await DB.dbSaveGameStats(guildID, steamID, gameID.toString(), model);
         return model;
     } catch (e) {
         console.error(e);
@@ -92,10 +92,10 @@ export async function getUserGameStats(steamID:string, gameID:number) {
 }
 
 // returns if the user owns the game, and returns the detailed game info if so.
-async function userOwnsGame(steamID:string, gameID:number) {
+async function userOwnsGame(guildID:string, steamID:string, gameID:number) {
     if (!steamID || !gameID) return;
     
-    const dbOwns = await DB.dbUserOwnsGame(steamID, gameID.toString());
+    const dbOwns = await DB.dbUserOwnsGame(guildID, steamID, gameID.toString());
     if (dbOwns) return dbOwns;
 
     try {
@@ -118,6 +118,6 @@ async function tryUpdateAllGames() {
 	}
 }
 
-export async function untrackUsersGame(steamID:string, gameID:string) {
-	DB.dbUntrackUsersGame(steamID,gameID);
+export async function untrackUsersGame(guildID:string, steamID:string, gameID:string) {
+	DB.dbUntrackUsersGame(guildID, steamID,gameID);
 }

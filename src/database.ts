@@ -38,23 +38,28 @@ export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<strin
     if (!theKey) return false;
     return theKey;
 }
-async function dbGetAllGameStats(steamID:string) {
+async function dbGetAllGameStats(guildID:string, steamID:string) {
+    //! not working
     if (!gamesDB.has(steamID)) return false;
     return gamesDB.get(steamID)
 }
-export function dbUserTracksGame(steamID:string, gameID:string) {
-    const userGames = gamesDB.get(steamID);
-    return gameID in userGames;
+export function dbUserTracksGame(guildID:string, steamID:string, gameID:string) {
+    if (!gamesDB.has(guildID)) return false;
+    const userGames = gamesDB.get(guildID);
+    if (!userGames.hasOwnProperty(steamID)) return false;
+    return gameID in userGames[steamID];
 }
-export async function dbSaveGameStats(steamID:string, gameID:string, gameStats:any) {
-    const oldUserGames = gamesDB.get(steamID);
-    var model =  Object.assign({}, oldUserGames);
-    model[gameID] = gameStats;
-    gamesDB.set(steamID, model);
+export async function dbSaveGameStats(guildID:string, steamID:string, gameID:string, gameStats:any) {
+    const oldUserGames = gamesDB.get(guildID);
+    var model = Object.assign({}, oldUserGames);
+    if (!model.hasOwnProperty(steamID)) model[steamID] = {}
+    model[steamID][gameID] = gameStats;
+    gamesDB.set(guildID, model);
 }
-export async function dbUserOwnsGame(steamID:string, gameID:string) {
-    if(!gamesDB.has(steamID)) return false;
-    const hasGame = gamesDB.get(steamID)[gameID]
+export async function dbUserOwnsGame(guildID:string, steamID:string, gameID:string) {
+    if (!gamesDB.has(guildID)) return false;
+    if(!(steamID in gamesDB.get(guildID))) return false;
+    const hasGame = gamesDB.get(guildID)[steamID][gameID]
     return hasGame ? hasGame : false;
 }
 
@@ -72,11 +77,11 @@ export async function dbGetGameID(gameName:string) {
 
     return match;
 }
-export async function dbUntrackUsersGame(steamID:string, gameID:string) {
-    const oldGames = gamesDB.get(steamID);
-    if (oldGames.hasOwnProperty(gameID)) {
-        delete oldGames[gameID];
-        gamesDB.set(steamID, oldGames);
+export async function dbUntrackUsersGame(guildID:string, steamID:string, gameID:string) {
+    const oldGames = gamesDB.get(guildID);
+    if (oldGames[steamID].hasOwnProperty(gameID)) {
+        delete oldGames[steamID][gameID];
+        gamesDB.set(guildID, oldGames);
     }
 }
 export function dbGamesEmpty(): boolean {
