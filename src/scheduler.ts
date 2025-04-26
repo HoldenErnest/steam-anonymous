@@ -1,20 +1,31 @@
 import * as DB from "./database"
 import * as Messenger from "./messenger"
+import * as SteamManager from "./steam-manager"
 import cron from "node-cron";
+import { getChangesFromRecentGames } from "./steam-manager";
 
 
-export async function scheduleChips() {
-    // CHIPS are scheduled to run at 9AM and 9PM every day
-    var task = cron.schedule('* 9,21 * * *', () =>  {
-        console.log('will execute every minute until stopped');
+export async function scheduleTokens() {
+    // CHIPS are scheduled to run at 9AM and 9PM every day, 9,21
+    var task = cron.schedule('0,30 * * * * *', async () =>  {
+        console.log('Running Token Generation..');
+        const guilds = await DB.dbGetAllGuilds();
 
-        //TODO: go through every guild
-        //TODO: go through every user
-        //TODO: go through every game
-        //TODO: check Steam API and note the differences.
-
-        //TODO: ^^ go through every user then getUserRecentGames()?
-        //TODO: since I need the icon_url anyway.
+        for (var guild of guilds) {
+            const users = await DB.dbGetAllUsersFromGuild(guild.guildID);
+            if (!users) continue;
+            for (var steamID of users) {
+                const changes = await SteamManager.getChangesFromRecentGames(guild.guildID, steamID);
+                var userData = await SteamManager.getSteamUserData(steamID);
+                if (userData.hasOwnProperty("code")) continue;
+                userData = userData as SteamManager.UserSaveInfo;
+                for (var gameInfoObj of changes) {
+                    Messenger.sendGameChangeToChannel(guild.channelID, userData,  gameInfoObj);
+                }
+            };
+            
+        };
+        console.log('Finished Token Generation..');
 
         // Image generation.
         /*

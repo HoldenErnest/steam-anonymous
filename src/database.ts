@@ -4,6 +4,7 @@
 import JSONdb from 'simple-json-db';
 import { AppBase } from 'steamapi';
 import { distance } from "closest-match";
+import { GameSaveInfo } from './steam-manager';
 
 const usersDB = new JSONdb("./database/users.json"); // stores the IDs of users
 const gamesDB = new JSONdb("./database/games.json"); // stores the IDs of games
@@ -30,7 +31,6 @@ export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<strin
     return theKey;
 }
 export async function dbGetAllGameStats(guildID:string, steamID:string) {
-    //! not working
     if (!gamesDB.has(guildID)) return false;
     const allUsers = gamesDB.get(guildID);
     if (!allUsers.hasOwnProperty(steamID)) return false;
@@ -42,7 +42,7 @@ export function dbUserTracksGame(guildID:string, steamID:string, gameID:string) 
     if (!userGames.hasOwnProperty(steamID)) return false;
     return gameID in userGames[steamID];
 }
-export async function dbSaveGameStats(guildID:string, steamID:string, gameID:string, gameStats:any) {
+export async function dbSaveGameStats(guildID:string, steamID:string, gameID:string, gameStats:GameSaveInfo) {
     const oldUserGames = gamesDB.get(guildID);
     var model = Object.assign({}, oldUserGames);
     if (!model.hasOwnProperty(steamID)) model[steamID] = {}
@@ -76,6 +76,11 @@ export async function dbUntrackUsersGame(guildID:string, steamID:string, gameID:
         gamesDB.set(guildID, oldGames);
     }
 }
+export async function dbGetAllUsersFromGuild(guildID:string): Promise<string[] | false> {
+    if (!gamesDB.has(guildID)) return false;
+    const theUsers = Object.keys(gamesDB.get(guildID));
+    return theUsers;
+}
 export function dbGamesEmpty(): boolean {
     const test = !allGamesDB.has("games");
     return test;
@@ -88,8 +93,17 @@ export async function dbSetGuildChannel(guildID:string, channelID:string) {
 export async function dbGetGuildChannel(guildID:string) {
     return guildsDB.get(guildID);
 }
-export async function getAllGuilds() {
-    return guildsDB.JSON();
+export async function dbGetAllGuilds(): Promise<GuildInfo[]> {
+    const allGuilds = guildsDB.JSON();
+    const allKeys = Object.keys(allGuilds);
+    const allInfo:GuildInfo[] = allKeys.map((key) => {
+        return {guildID: key, channelID: allGuilds[key]};
+    });
+    return allInfo;
+}
+export type GuildInfo = {
+    guildID: string,
+    channelID: string
 }
 
 function bestDistanceGame(target:string, arr:AppBase[]) {

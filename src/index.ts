@@ -12,8 +12,8 @@ const client = new Client({
 
 client.once("ready", () => {
 	console.log("[START] Bot ready.");
-	Messenger.updateChannels(client);
-	schedule.scheduleChips();
+	Messenger.updateAllChannels();
+	schedule.scheduleTokens();
 });
 
 client.on("guildCreate", async (guild) => {
@@ -54,7 +54,7 @@ client.on("interactionCreate", async (interaction) => {
 
 client.login(config.DISCORD_TOKEN);
 
-// vomits*
-export async function tryUpdateChannel(channel:string) {
-	Messenger.updateChannel(client, channel);
+// channel must be message type
+export function channelFromID(channelID:string): GuildBasedChannel {
+	return client.channels.cache.get(channelID) as GuildBasedChannel;
 }

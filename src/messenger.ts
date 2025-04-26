@@ -3,12 +3,13 @@
 
 import { CommandInteraction, ChannelType, GuildBasedChannel, Client } from "discord.js"
 import * as DB from "./database"
-import { tryUpdateChannel } from "./index"
+import { channelFromID } from "./index"
+import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
 
-var channels:GuildBasedChannel[] = [];
+var allChannels:GuildBasedChannel[] = [];
 
 export async function sendMessageToAll(message:string) {
-    channels.forEach(channel => {
+    allChannels.forEach(channel => {
         sendMessageToChannel(channel, message);
     });
 }
@@ -32,34 +33,44 @@ export async function sendMessageToChannel(channel:GuildBasedChannel, message:st
     }
 }
 
+export async function sendGameChangeToChannel(channelID:string, userData:UserSaveInfo, gameInfo:GameSaveInfo) {
+    //! MAKE THIS BETTER!
+    const message = `
+    For: ${userData.discordID ? `<@${userData.discordID}>` : userData.steamUser}
+    Name: ${gameInfo.gameName}
+    LastPlay: ${gameInfo.lastPlayed}
+    `
+    await sendMessageToChannel(channelFromID(channelID), message);
+}
+
 export async function subscribeChannel(guildID:string, channel?:GuildBasedChannel|string) {
     if (!channel) {
         console.error("No channel was specified");
         return;
     }
     const channelID = typeof channel == "string" ? channel : channel.id;
+    const oldChannelID = await DB.dbGetGuildChannel(guildID)
     DB.dbSetGuildChannel(guildID, channelID);
-
-    await tryUpdateChannel(channelID);
+    removeActiveChannel(oldChannelID);
+    await addChannel(channelID);
 }
 
-export async function updateChannels(client:Client<boolean>) {
-    const allGuilds = Object.values(await DB.getAllGuilds());
-    channels = [];
-    allGuilds.forEach(channelID => {
-        console.log("adding channel: " + channelID);
-        const channel = client.channels.cache.get(channelID);
-        channels.push(channel as GuildBasedChannel);
+export async function updateAllChannels() {
+    const allGuilds = await DB.dbGetAllGuilds();
+    allChannels = [];
+    allGuilds.forEach(guild => {
+        console.log("adding channel: " + guild.channelID);
+        addChannel(guild.channelID);
     });
 }
 // calling index.tryUpdateChannel will come here with client
-export async function updateChannel(client:Client<boolean>, channelID:string) {
+export async function addChannel(channelID:string) {
     removeActiveChannel(channelID);
-    const channel = client.channels.cache.get(channelID);
-    channels.push(channel as GuildBasedChannel);
+    const channel = channelFromID(channelID);
+    allChannels.push(channel);
 }
 function removeActiveChannel(channelID:string) {
-    channels = channels.filter(c => {
+    allChannels = allChannels.filter(c => {
         return c.id !== channelID;
     });
 }

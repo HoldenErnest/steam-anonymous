@@ -30,11 +30,12 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
     const guildID = interaction.guildId!;
     
     // find user from ID
-    const userData = await SteamManager.getSteamUserData(steamID);
+    var userData = await SteamManager.getSteamUserData(steamID);
     if (!userData || userData.hasOwnProperty("code")) {
         response = `User not found with ID: ${steamID}`;
         return interaction.editReply(response);
     }
+    userData = userData as SteamManager.UserSaveInfo;
     const usernameString = `[${userData.steamUser}](${userData.steamURL})`
     // get app id from name
     const gameInfo = await SteamManager.getAppId(steamGame);
