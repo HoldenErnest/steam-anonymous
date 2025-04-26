@@ -12,16 +12,7 @@ const guildsDB = new JSONdb("./database/guilds.json"); // assign channels to eac
 
 //discordUser, steamID, gameID are all unique
 
-export async function dbSaveUser(steamID:string, steamUser:string, discordUser?:string, steamURL?:string) {
-    if (!usersDB.has(steamID)) {
-        usersDB.set(steamID, {steamUser, discordUser, steamURL});
-    }
-    
-    //update user if its already in there
-    var model = usersDB.get(steamID);
-    model.steamUser = steamUser ? steamUser: model.steamUser;
-    model.discordUser = discordUser ? discordUser : "";
-    model.steamURL = steamURL ? steamURL: model.steamURL;
+export async function dbSaveUser(steamID:string, model:any) {
     usersDB.set(steamID, model);
 }
 
@@ -32,16 +23,18 @@ export async function dbGetUserFromSteam(steamID:string) {
 export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<string | false> {
     var theKey;
     for (var key in usersDB.JSON()) {
-        const dUser = usersDB.get(key)["discordUser"];
+        const dUser = usersDB.get(key)["discordID"];
         if (dUser && dUser == discordUser) theKey = key;
     }
     if (!theKey) return false;
     return theKey;
 }
-async function dbGetAllGameStats(guildID:string, steamID:string) {
+export async function dbGetAllGameStats(guildID:string, steamID:string) {
     //! not working
-    if (!gamesDB.has(steamID)) return false;
-    return gamesDB.get(steamID)
+    if (!gamesDB.has(guildID)) return false;
+    const allUsers = gamesDB.get(guildID);
+    if (!allUsers.hasOwnProperty(steamID)) return false;
+    return allUsers[steamID];
 }
 export function dbUserTracksGame(guildID:string, steamID:string, gameID:string) {
     if (!gamesDB.has(guildID)) return false;
@@ -64,11 +57,10 @@ export async function dbUserOwnsGame(guildID:string, steamID:string, gameID:stri
 }
 
 export async function dbUpdateAllGames(gameData:AppBase[]) {
-    console.log("Updating all games...");
     allGamesDB.deleteAll();
     allGamesDB.set("games", gameData); //* in the future, remove games with type dlc
-    console.log("Done updating all games.");
     allGamesDB.sync();
+    console.log("Done updating all games.");
 }
 export async function dbGetGameID(gameName:string) {
     console.log("Finding game: " + gameName);

@@ -31,7 +31,7 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
     
     // find user from ID
     const userData = await SteamManager.getSteamUserData(steamID);
-    if (!userData) {
+    if (!userData || userData.hasOwnProperty("code")) {
         response = `User not found with ID: ${steamID}`;
         return interaction.editReply(response);
     }
@@ -60,7 +60,7 @@ export async function trackGameResponse(interaction: ModalSubmitInteraction) {
                 response = `${usernameString} has a private profile`;
                 break;
             case 4:
-                response = `API Error getting stats for ${usernameString}`;
+                response = `API Error getting game stats for ${usernameString}`;
                 break;
             default:
                 response = `Problem fetching user info :(`;

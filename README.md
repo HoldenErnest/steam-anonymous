@@ -32,3 +32,8 @@ A Discord Bot that uses the Steam API to track registered users and hand out "ch
 
 ![test1](./img/notes/steamA%20test.png)
 ![test2](./img/notes/steamA%20test2.png)
+
+
+(Old vs New Tokens)
+<img src="./img/notes/oldCopper.png" width=180px height=180px>
+<img src="./img/notes/newGold.png" width=200px height=200px>

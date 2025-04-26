@@ -2,7 +2,7 @@
 // Default Modals to be reused on command interactions
 
 import { CommandInteraction, ModalSubmitInteraction, SlashCommandBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
-import { getSteamIDFromDiscord, saveUser } from "./steam-manager";
+import { codes, getSteamIDFromDiscord, saveUser } from "./steam-manager";
 
 export async function createTrackingForm(interaction: CommandInteraction, tracking:boolean, discordName?:string, discordID?:string) {
 	var preText = "";
@@ -99,9 +99,22 @@ export async function assignUserResponse(interaction: ModalSubmitInteraction, as
     const steamID = interaction.fields.getTextInputValue('steamID_input')
     const discordUser = interaction.fields.getTextInputValue('username_input')
     const userData = await saveUser(steamID, discordUser);
-    if (userData) {
-        await interaction.editReply(`<@${discordUser}> is now associated with an ID.`);
+
+    if (userData && userData.hasOwnProperty("code")) {
+        //@ts-ignore
+        switch (userData.code) {
+            case codes.apiError:
+                response = `API Error getting User from Steam ID: '${steamID}'`;
+                break;
+            default:
+                response = `Problem fetching user info :(`;
+                break;
+        }
+    } else if (userData) {
+        response = `<@${discordUser}> is now associated with an ID.`;
     } else {
-        await interaction.editReply(`Could not find the Steam ID: ${steamID}`);
+        response = `Could not find the Steam ID: ${steamID}`;
     }
+    await interaction.editReply(response);
+    
 }

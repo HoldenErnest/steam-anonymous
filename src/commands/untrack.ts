@@ -33,7 +33,7 @@ export async function untrackGameResponse(interaction: ModalSubmitInteraction) {
 
 	// find user from ID
 	const userData = await SteamManager.getSteamUserData(steamID);
-	if (!userData) {
+	if (!userData || userData.hasOwnProperty("code")) {
 		response = `User not found with ID: ${steamID}`;
 		return interaction.editReply(response);
 	}
