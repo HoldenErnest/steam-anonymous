@@ -6,13 +6,17 @@ import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
 import { Canvas, Image } from "canvas"
 import fs from "fs";
 
+// CONSTANTS ----------
 const overlayPaths = {
     gold: './img/tokens/front/gold.png',
     silver: './img/tokens/front/silver.png',
     bronze: './img/tokens/front/bronze.png'
 }
-const backgoundPaths = {
-    black: './img/tokens/back/black.png'
+const backgroundPaths = {
+    black: './img/tokens/back/black.png',
+    gold: './img/tokens/back/gold.png',
+    silver: './img/tokens/back/silver.png',
+    bronze: './img/tokens/back/bronze.png',
 }
 
 const overlayDim = {
@@ -36,22 +40,40 @@ const userPos = {
     x: (overlayDim.width - userDim.width - pfpOffset),
     y: (overlayDim.height - userDim.height - pfpOffset)
 }
+type TokenType = {
+    overlayPath:string,
+    backgroundPath:string,
+    tokens:number,
+    daysClean:number
+}
+// CONSTANTS ----------
 
-export async function generateToken(userData:UserSaveInfo, gameInfo:GameSaveInfo): Promise<string | false> {
+export async function generateToken(userData:UserSaveInfo, gameInfo:GameSaveInfo): Promise<{b64: string, daysClean:number, tokens:number} | false> {
+    if (!gameInfo.lastPlayed) {
+        console.log("game doesnt have last played.. " + gameInfo.gameName);
+        return false;
+    }
+    const daysClean = daysPast(gameInfo.lastPlayed);
 
-    //TODO : only generate token if the image should be generated.
-    return await getImageBase64(userData, gameInfo);
+    const tokenInfo = getTokenType(daysClean,gameInfo.tokensRecieved);
+    if (!tokenInfo) return false;
+
+    const b64_string = await getImageBase64(userData, gameInfo, tokenInfo);
+    if (!b64_string) return false;
+    return {b64:b64_string, daysClean:daysClean, tokens:tokenInfo.tokens}
 }
 
-async function getImageBase64(userData:UserSaveInfo, gameInfo:GameSaveInfo) : Promise<string | false> {
+async function getImageBase64(userData:UserSaveInfo, gameInfo:GameSaveInfo, tokenInfo:TokenType) : Promise<string | false> {
     try {
 
         ensureAllImages();
 
+        //TODO: look into 'sharp' to fix transparency things
+
         const base64_img = await mergeImages([
-            { src: backgoundPaths.black, x: 0, y: 0 },
+            { src: tokenInfo.backgroundPath, x: 0, y: 0 },
             { src: gameInfo.headerURL, x: gamePos.x, y: gamePos.y },
-            { src: overlayPaths.gold, x: 0, y: 0 },
+            { src: tokenInfo.overlayPath, x: 0, y: 0 },
             { src: userData.steamPFP, x: userPos.x, y: userPos.y },
         ], {
             Canvas: Canvas,
@@ -74,4 +96,30 @@ function ensureAllImages() {
           throw new Error(`Image not found: ${path}`);
         }
     }
+    for (const path of Object.values(backgroundPaths)) {
+        if (!fs.existsSync(path)) {
+          throw new Error(`Image not found: ${path}`);
+        }
+    }
+}
+function getTokenType(daysClean:number, tokensRecieved:number):TokenType|false {
+    if (daysClean < 7) {
+        return false;
+    } else if (daysClean < 30) { // bronze
+        if (tokensRecieved < 1)
+            return {overlayPath: overlayPaths.bronze, backgroundPath: backgroundPaths.bronze, tokens: 1, daysClean:daysClean};
+    } else if (daysClean < 365) {// silver
+        if (tokensRecieved < 2)
+            return {overlayPath: overlayPaths.silver, backgroundPath: backgroundPaths.silver, tokens: 2, daysClean:daysClean};
+    } else { // gold
+        if (tokensRecieved < 3)
+            return {overlayPath: overlayPaths.gold, backgroundPath: backgroundPaths.gold, tokens: 3, daysClean:daysClean};
+    }
+    return false;
+}
+
+function daysPast(lastDate:Date):number {
+    const timeDifference = Math.abs(lastDate.getTime() - new Date().getTime());
+    const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+    return daysDifference;
 }

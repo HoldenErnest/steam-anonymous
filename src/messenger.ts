@@ -6,6 +6,8 @@ import * as DB from "./database"
 import { channelFromID } from "./index"
 import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
 import { generateToken } from "./tokenGenerator";
+import { GuildInfo } from "./database";
+import { GameInfo } from "steamapi";
 
 var allChannels:GuildBasedChannel[] = [];
 
@@ -37,34 +39,52 @@ export async function sendMessageToChannel(channel:GuildBasedChannel, message:st
         }
     }
 }
-export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:string) {
-    if (!channel) return;
+export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:string, message?:string): Promise<boolean> {
+    if (!channel) return false;
     if (channel.isTextBased()) {
 
         const sfbuff = Buffer.from(base64_img.split(",")[1], "base64");
 
         const attachment = new AttachmentBuilder(sfbuff);
         try {
-            await channel.send({ files: [attachment] });
-
+            await channel.send({ files: [attachment], content: message });
+            return true;
         } catch (e) {
             console.error("Sending image error: " + e);
         }
     }
+    return false;
 }
 
-export async function sendGameChangeToChannel(channelID:string, userData:UserSaveInfo, gameInfo:GameSaveInfo) {
+export async function sendGameChangeToChannel(guild:GuildInfo, userData:UserSaveInfo, gameInfo:GameSaveInfo) {
     //! MAKE THIS BETTER!
-    const message = `
-    For: ${userData.discordID ? `<@${userData.discordID}>` : userData.steamUser}
-    Name: ${gameInfo.gameName}
-    LastPlay: ${gameInfo.lastPlayed}
-    `
-    const c = channelFromID(channelID);
-    //await sendMessageToChannel(c, message);
+    if (!gameInfo.lastPlayed) return;
+    const userString = `${userData.discordID ? `<@${userData.discordID}>` : userData.steamUser}`;
+    const daysClean = daysPast(gameInfo.lastPlayed);
+    const message = `Congrats ${userString}! You havent played **${gameInfo.gameName}** for ${daysClean} days!`
+    const c = channelFromID(guild.channelID);
+    //
     const img64 = await generateToken(userData, gameInfo);
-    if (img64)
-        await sendImageToChannel(c, img64);
+    if (img64) {
+        const sentImage = await sendImageToChannel(c, img64.b64, message); //! make a tokensRecieved key for games. make sure to RESET it to 0 if you reset streak
+        if (sentImage) {
+            console.log("Sent token to " + userData.steamUser)
+            DB.dbSetTokenCount(guild.guildID, userData.steamID, gameInfo.id.toString(), img64.tokens);
+            return;
+        }
+        //await sendMessageToChannel(c, message);
+    }
+
+    await sendChirp(guild, gameInfo);
+}
+export async function sendChirp(guild:GuildInfo, gameInfo:GameSaveInfo) {
+    // Algoritm for commentary
+    /*
+    total < 100 && timeDelta > 5 :  "Slow down, you played quite a few hours"
+    total >= 100 && timeDelta > 4 : "Youre really invested in that game"
+    total >= 200 && 
+    */
+   return;
 }
 
 export async function subscribeChannel(guildID:string, channel?:GuildBasedChannel|string) {
@@ -97,4 +117,9 @@ function removeActiveChannel(channelID:string) {
     allChannels = allChannels.filter(c => {
         return c.id !== channelID;
     });
+}
+function daysPast(lastDate:Date):number {
+    const timeDifference = Math.abs(lastDate.getTime() - new Date().getTime());
+    const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+    return daysDifference;
 }

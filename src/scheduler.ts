@@ -23,25 +23,11 @@ export async function scheduleTokens() {
                 if (userData.hasOwnProperty("code")) continue;
                 userData = userData as SteamManager.UserSaveInfo;
                 for (var gameInfoObj of changes) {
-                    Messenger.sendGameChangeToChannel(guild.channelID, userData,  gameInfoObj);
+                    Messenger.sendGameChangeToChannel(guild, userData,  gameInfoObj);
                 }
             };
             
         };
         console.log('Finished Token Generation..');
-
-        // Image generation.
-        /*
-        7 days: bronze
-        30 days: silver
-        365 days: gold
-        */
-
-        // Algoritm for commentary
-        /*
-        total < 100 && timeDelta > 5 :  "Slow down, you played quite a few hours"
-        total >= 100 && timeDelta > 4 : "Youre really invested in that game"
-        total >= 200 && 
-        */
     });
 }

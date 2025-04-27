@@ -11,7 +11,12 @@ const gamesDB = new JSONdb("./database/games.json"); // stores the IDs of games
 const allGamesDB = new JSONdb("./database/allGames.json"); // stores whatever tracked games each user has
 const guildsDB = new JSONdb("./database/guilds.json"); // assign channels to each guild
 
-//discordUser, steamID, gameID are all unique
+//discordID, steamID, gameID are all unique
+
+//!
+//! TODO: make this all save asynchronously at intermittent intervals and instead store everything in memory.
+//! SQL would probably be easiest
+//!
 
 export async function dbSaveUser(steamID:string, model:any) {
     usersDB.set(steamID, model);
@@ -21,16 +26,16 @@ export async function dbGetUserFromSteam(steamID:string) {
     if(!usersDB.has(steamID)) return false;
     return usersDB.get(steamID);
 }
-export async function dbGetSteamIDFromDiscord(discordUser:string): Promise<string | false> {
+export async function dbGetSteamIDFromDiscord(discordID:string): Promise<string | false> {
     var theKey;
     for (var key in usersDB.JSON()) {
         const dUser = usersDB.get(key)["discordID"];
-        if (dUser && dUser == discordUser) theKey = key;
+        if (dUser && dUser == discordID) theKey = key;
     }
     if (!theKey) return false;
     return theKey;
 }
-export async function dbGetAllGameStats(guildID:string, steamID:string) {
+export async function dbGetAllGameStats(guildID:string, steamID:string): Promise<GameSaveInfo[] | false> {
     if (!gamesDB.has(guildID)) return false;
     const allUsers = gamesDB.get(guildID);
     if (!allUsers.hasOwnProperty(steamID)) return false;
@@ -84,6 +89,12 @@ export async function dbGetAllUsersFromGuild(guildID:string): Promise<string[] |
 export function dbGamesEmpty(): boolean {
     const test = !allGamesDB.has("games");
     return test;
+}
+export async function dbSetTokenCount(guildID:string, steamID:string, gameID:string, tokens?:number) {
+    var entry = gamesDB.has(guildID) ? gamesDB.get(guildID) : false;
+    if (!entry || !(entry.hasOwnProperty(steamID)) || !(entry[steamID].hasOwnProperty(gameID))) return false;
+    entry[steamID][gameID].tokensRecieved = tokens ? tokens : 1;
+    gamesDB.set(guildID, entry);
 }
 
 // GUILD SAVING

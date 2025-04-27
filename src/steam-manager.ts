@@ -91,7 +91,8 @@ export async function getUserGameStats(guildID:string, steamID:string, gameID:nu
 			iconURL: gameDetails.game.logoURL,
 			headerURL: gameDetails.game.headerURL,
 			recentMinutes: gameDetails.recentMinutes,
-			totalTime: gameDetails.minutes
+			totalTime: gameDetails.minutes,
+			tokensRecieved: 0
             //stats: res.stats ? res.stats : []
         }
 
@@ -157,37 +158,50 @@ export type GameSaveInfo = {
 	headerURL: string,
 	recentMinutes: number
 	totalTime: number,
+	tokensRecieved: number
 }
 
 // return all changes from the tracked games.
 export async function getChangesFromRecentGames(guildID:string, steamID:string): Promise<GameSaveInfo[]> {
-	const recentGames = await Steam.getUserRecentGames(steamID);
-	const trackedGames = await DB.dbGetAllGameStats(guildID, steamID);
+	//const recentGames = await Steam.getUserRecentGames(steamID);
 	var allChanges:GameSaveInfo[] = [];
-	for (var g1 in trackedGames) {
-		for (var g2 of recentGames) {
-			const changes = await getGameStatChanges(guildID, steamID, g2, trackedGames[g1]);
-			if (changes) {
-				allChanges.push(changes);
+	try {
+
+		//! for some reason Steam.getUserStats(gameID) returns almost nothing. garbage api
+		
+		const recentGames = await Steam.getUserOwnedGames(steamID);
+		const trackedGames = await DB.dbGetAllGameStats(guildID, steamID);
+		if (!trackedGames) return allChanges
+
+		for (var g1 in trackedGames) {
+			for (var g2 of recentGames) {
+				const changes = await getGameStatChanges(guildID, steamID, g2, trackedGames[g1]);
+				if (changes) {
+					allChanges.push(changes);
+				}
 			}
 		}
+	} catch (e) {
+		console.error("ChangesStats: " + e);
+		return [];
 	}
 
 	return allChanges;
 }
-async function getGameStatChanges(guildID:string, steamID:string, recentStats:UserPlaytime<GameInfoBasic>, trackedStats:GameSaveInfo): Promise<GameSaveInfo | false> {
+async function getGameStatChanges(guildID:string, steamID:string, recentStats:UserPlaytime<Game | GameInfo | GameInfoExtended>, trackedStats:GameSaveInfo): Promise<GameSaveInfo | false> {
 	if (recentStats.game.id != trackedStats.id)  {
 		return false; // if these games arent the same, dont bother returning a comparison
 	}
 	var changes:GameSaveInfo = {
-		gameName: recentStats.game.name,
+		gameName: trackedStats.gameName,
 		id: trackedStats.id,
 		lastPlayed: recentStats.lastPlayedAt,
 		totalTime: recentStats.minutes,
 		recentMinutes: recentStats.recentMinutes,
 		minutes: recentStats.minutes,
 		iconURL: trackedStats.iconURL,
-		headerURL: trackedStats.headerURL
+		headerURL: trackedStats.headerURL,
+		tokensRecieved: trackedStats.tokensRecieved
 	}
 	return changes;
 }
