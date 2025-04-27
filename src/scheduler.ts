@@ -1,3 +1,6 @@
+// Holden Ernest - 4/25/2025
+// Schedule events such as giving out tokens
+
 import * as DB from "./database"
 import * as Messenger from "./messenger"
 import * as SteamManager from "./steam-manager"

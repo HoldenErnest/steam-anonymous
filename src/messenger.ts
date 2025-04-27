@@ -1,10 +1,11 @@
 // Holden Ernest - 4/24/2025
 // Handles the sending of async messages to clients
 
-import { CommandInteraction, ChannelType, GuildBasedChannel, Client } from "discord.js"
+import { CommandInteraction, ChannelType, GuildBasedChannel, Client, MessagePayload, AttachmentBuilder, Base64String } from "discord.js"
 import * as DB from "./database"
 import { channelFromID } from "./index"
 import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
+import { generateToken } from "./tokenGenerator";
 
 var allChannels:GuildBasedChannel[] = [];
 
@@ -29,7 +30,26 @@ Look at you. You're weak, pathetic even. You look like you need me to watch your
 export async function sendMessageToChannel(channel:GuildBasedChannel, message:string) {
     if (!channel) return;
     if (channel.isTextBased()) {
-        channel.send(message);
+        try {
+            await channel.send(message);
+        } catch (e) {
+            console.error("Sending message error: " + e);
+        }
+    }
+}
+export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:string) {
+    if (!channel) return;
+    if (channel.isTextBased()) {
+
+        const sfbuff = Buffer.from(base64_img.split(",")[1], "base64");
+
+        const attachment = new AttachmentBuilder(sfbuff);
+        try {
+            await channel.send({ files: [attachment] });
+
+        } catch (e) {
+            console.error("Sending image error: " + e);
+        }
     }
 }
 
@@ -40,7 +60,11 @@ export async function sendGameChangeToChannel(channelID:string, userData:UserSav
     Name: ${gameInfo.gameName}
     LastPlay: ${gameInfo.lastPlayed}
     `
-    await sendMessageToChannel(channelFromID(channelID), message);
+    const c = channelFromID(channelID);
+    //await sendMessageToChannel(c, message);
+    const img64 = await generateToken(userData, gameInfo);
+    if (img64)
+        await sendImageToChannel(c, img64);
 }
 
 export async function subscribeChannel(guildID:string, channel?:GuildBasedChannel|string) {
