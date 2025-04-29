@@ -57,7 +57,6 @@ export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:s
 }
 
 export async function sendGameChangeToChannel(guild:GuildInfo, userData:UserSaveInfo, gameInfo:GameSaveInfo) {
-    //! MAKE THIS BETTER!
     if (!gameInfo.lastPlayed) return;
     const userString = `${userData.discordID ? `<@${userData.discordID}>` : userData.steamUser}`;
     const daysClean = daysPast(gameInfo.lastPlayed);
@@ -66,7 +65,7 @@ export async function sendGameChangeToChannel(guild:GuildInfo, userData:UserSave
     //
     const img64 = await generateToken(userData, gameInfo);
     if (img64) {
-        const sentImage = await sendImageToChannel(c, img64.b64, message); //! make a tokensRecieved key for games. make sure to RESET it to 0 if you reset streak
+        const sentImage = await sendImageToChannel(c, img64.b64, message);
         if (sentImage) {
             console.log("Sent token to " + userData.steamUser)
             DB.dbSetTokenCount(guild.guildID, userData.steamID, gameInfo.id.toString(), img64.tokens);
@@ -84,6 +83,8 @@ export async function sendChirp(guild:GuildInfo, gameInfo:GameSaveInfo) {
     total >= 100 && timeDelta > 4 : "Youre really invested in that game"
     total >= 200 && 
     */
+
+    //TODO: send chirps
    return;
 }
 
