@@ -17,6 +17,7 @@
     "dotenv": "^16.5.0",
     "merge-images": "^2.0.0",
     "node-cron": "^3.0.3",
+    "sharp": "^0.34.1",
     "simple-json-db": "^2.0.0",
     "steamapi": "^3.1.1"
   },

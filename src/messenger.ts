@@ -44,7 +44,7 @@ export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:s
     if (!channel) return false;
     if (channel.isTextBased()) {
 
-        const sfbuff = Buffer.from(base64_img.split(",")[1], "base64");
+        const sfbuff = Buffer.from(base64_img.split(",")[1] ? base64_img.split(",")[1] : base64_img, "base64");
 
         const attachment = new AttachmentBuilder(sfbuff);
         try {

@@ -23,7 +23,7 @@ export async function scheduleTokens() {
                 if (userData.hasOwnProperty("code")) continue;
                 userData = userData as SteamManager.UserSaveInfo;
                 for (var gameInfoObj of changes) {
-                    Messenger.sendGameChangeToChannel(guild, userData,  gameInfoObj);
+                    await Messenger.sendGameChangeToChannel(guild, userData,  gameInfoObj);
                 }
             };
             

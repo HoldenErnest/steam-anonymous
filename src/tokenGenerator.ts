@@ -5,6 +5,7 @@ import mergeImages from "merge-images"
 import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
 import { Canvas, Image } from "canvas"
 import fs from "fs";
+import sharp from "sharp";
 
 // CONSTANTS ----------
 const overlayPaths = {
@@ -32,13 +33,13 @@ const gameDim = {
     height: 215
 }
 const gamePos = {
-    x: (overlayDim.width/2 - gameDim.width/2),
-    y: (overlayDim.height/2 - gameDim.height/2)
+    x: Math.floor(overlayDim.width/2 - gameDim.width/2),
+    y: Math.floor(overlayDim.height/2 - gameDim.height/2)
 }
 const pfpOffset = 100;
 const userPos = {
-    x: (overlayDim.width - userDim.width - pfpOffset),
-    y: (overlayDim.height - userDim.height - pfpOffset)
+    x: Math.floor(overlayDim.width - userDim.width - pfpOffset),
+    y: Math.floor(overlayDim.height - userDim.height - pfpOffset)
 }
 type TokenType = {
     overlayPath:string,
@@ -67,22 +68,9 @@ async function getImageBase64(userData:UserSaveInfo, gameInfo:GameSaveInfo, toke
     try {
 
         ensureAllImages();
-
-        //TODO: look into 'sharp' to fix transparency things
-
-        const base64_img = await mergeImages([
-            { src: tokenInfo.backgroundPath, x: 0, y: 0 },
-            { src: gameInfo.headerURL, x: gamePos.x, y: gamePos.y },
-            { src: tokenInfo.overlayPath, x: 0, y: 0 },
-            { src: userData.steamPFP, x: userPos.x, y: userPos.y },
-        ], {
-            Canvas: Canvas,
-            Image: Image,
-            quality: 1,
-            format: 'image/png',
-            width: overlayDim.width,
-            height: overlayDim.height
-        })
+        
+        const base64_img = await mergeAsGeneric(userData, gameInfo, tokenInfo);
+        
         return base64_img;
     } catch (e) {
         console.error("imageGen: " + e);
@@ -90,6 +78,48 @@ async function getImageBase64(userData:UserSaveInfo, gameInfo:GameSaveInfo, toke
     return false;
     
 }
+async function mergeAsSharp(userData:UserSaveInfo, gameInfo:GameSaveInfo, tokenInfo:TokenType): Promise<string> {
+
+    const gameBuffer = await getImageBufferFromUrl(gameInfo.headerURL);
+    const profileBuffer = await getImageBufferFromUrl(userData.steamPFP);
+
+    const base64_img = await sharp(tokenInfo.backgroundPath)
+        .ensureAlpha()
+        .composite([
+            { input: tokenInfo.backgroundPath, left: 0, top: 0 },
+            { input: gameBuffer, left: gamePos.x, top: gamePos.y },
+            { input: tokenInfo.overlayPath, left: 0, top: 0 },
+            { input: profileBuffer, left: userPos.x, top: userPos.y },
+        ])
+        .png()
+        .toBuffer();
+
+    return base64_img.toString('base64');
+}
+async function mergeAsGeneric(userData:UserSaveInfo, gameInfo:GameSaveInfo, tokenInfo:TokenType): Promise<string> {
+    const base64_img = await mergeImages([
+        { src: tokenInfo.backgroundPath, x: 0, y: 0 },
+        { src: gameInfo.headerURL, x: gamePos.x, y: gamePos.y },
+        { src: tokenInfo.overlayPath, x: 0, y: 0 },
+        { src: userData.steamPFP, x: userPos.x, y: userPos.y },
+    ], {
+        Canvas: Canvas,
+        Image: Image,
+        quality: 1,
+        format: 'image/png',
+        width: overlayDim.width,
+        height: overlayDim.height
+    })
+    return base64_img;
+}
+
+async function getImageBufferFromUrl(url:string) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
 function ensureAllImages() {
     for (const path of Object.values(overlayPaths)) {
         if (!fs.existsSync(path)) {
