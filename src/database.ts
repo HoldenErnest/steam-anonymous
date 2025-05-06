@@ -96,6 +96,17 @@ export async function dbSetTokenCount(guildID:string, steamID:string, gameID:str
     entry[steamID][gameID].tokensRecieved = tokens ? tokens : 1;
     gamesDB.set(guildID, entry);
 }
+export async function dbGetLastPlayed(guildID:string, steamID:string, gameID:string): Promise<Date | false> {
+    var entry = gamesDB.has(guildID) ? gamesDB.get(guildID) : false;
+    if (!entry || !(entry.hasOwnProperty(steamID)) || !(entry[steamID].hasOwnProperty(gameID))) return false;
+    return new Date(entry[steamID][gameID].lastPlayed);
+}
+export async function dbUpdateGameStats(guildID:string, steamID:string, gameID:string, gameInfo:GameSaveInfo) {
+    var entry = gamesDB.has(guildID) ? gamesDB.get(guildID) : false;
+    if (!entry || !(entry.hasOwnProperty(steamID)) || !(entry[steamID].hasOwnProperty(gameID))) return false;
+    entry[steamID][gameID] = gameInfo;
+    gamesDB.set(guildID, entry);
+}
 
 // GUILD SAVING
 export async function dbSetGuildChannel(guildID:string, channelID:string) {

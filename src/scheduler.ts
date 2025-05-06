@@ -29,5 +29,5 @@ export async function scheduleTokens() {
             
         };
         console.log('Finished Token Generation..');
-    });
+    }); 
 }

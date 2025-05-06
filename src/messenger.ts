@@ -8,6 +8,7 @@ import { GameSaveInfo, UserSaveInfo } from "./steam-manager";
 import { generateToken } from "./tokenGenerator";
 import { GuildInfo } from "./database";
 import { GameInfo } from "steamapi";
+import { sendChirp } from "./chirp";
 
 var allChannels:GuildBasedChannel[] = [];
 
@@ -58,34 +59,36 @@ export async function sendImageToChannel(channel:GuildBasedChannel, base64_img:s
 
 export async function sendGameChangeToChannel(guild:GuildInfo, userData:UserSaveInfo, gameInfo:GameSaveInfo) {
     if (!gameInfo.lastPlayed) return;
+
     const userString = `${userData.discordID ? `<@${userData.discordID}>` : userData.steamUser}`;
     const daysClean = daysPast(gameInfo.lastPlayed);
     const message = `Congrats ${userString}! You havent played **${gameInfo.gameName}** for ${daysClean} days!`
     const c = channelFromID(guild.channelID);
-    //
-    const img64 = await generateToken(userData, gameInfo);
-    if (img64) {
-        const sentImage = await sendImageToChannel(c, img64.b64, message);
+
+	// check if you played since last checked.
+	const oldLastPlayed = await DB.dbGetLastPlayed(guild.guildID, userData.steamID, gameInfo.id.toString());
+	if (oldLastPlayed && oldLastPlayed < gameInfo.lastPlayed) {
+		const lostStreak = daysPast(oldLastPlayed) - daysClean;
+		// 100 days since "last played", - 3 day streak, = lost a 97 day streak
+		// 12 days since "last played", - 11 days streak, = lost a 1 day streak. //* BUT on an 11 day streak still << which is more important
+		if (lostStreak > daysClean)  { // only chirp if you lost more days clean than you gained.
+			await sendChirp(c, userString, gameInfo, lostStreak);
+		}
+		gameInfo.tokensRecieved = 0;
+		DB.dbUpdateGameStats(guild.guildID, userData.steamID, gameInfo.id.toString(), gameInfo);
+	}
+	
+	// try to generate a token
+    const tokenInfo = await generateToken(userData, gameInfo);
+    if (tokenInfo) {
+        const sentImage = await sendImageToChannel(c, tokenInfo.b64, message);
         if (sentImage) {
             console.log("Sent token to " + userData.steamUser)
-            DB.dbSetTokenCount(guild.guildID, userData.steamID, gameInfo.id.toString(), img64.tokens);
+            DB.dbSetTokenCount(guild.guildID, userData.steamID, gameInfo.id.toString(), tokenInfo.tokens);
             return;
         }
-        //await sendMessageToChannel(c, message);
     }
-
-    await sendChirp(guild, gameInfo);
-}
-export async function sendChirp(guild:GuildInfo, gameInfo:GameSaveInfo) {
-    // Algoritm for commentary
-    /*
-    total < 100 && timeDelta > 5 :  "Slow down, you played quite a few hours"
-    total >= 100 && timeDelta > 4 : "Youre really invested in that game"
-    total >= 200 && 
-    */
-
-    //TODO: send chirps
-   return;
+    
 }
 
 export async function subscribeChannel(guildID:string, channel?:GuildBasedChannel|string) {

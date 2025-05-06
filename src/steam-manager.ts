@@ -156,7 +156,7 @@ export type GameSaveInfo = {
 	lastPlayed: Date | undefined,
 	iconURL: string,
 	headerURL: string,
-	recentMinutes: number
+	recentMinutes: number,
 	totalTime: number,
 	tokensRecieved: number
 }
