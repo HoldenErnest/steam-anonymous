@@ -6,11 +6,12 @@ import * as Messenger from "./messenger"
 import * as SteamManager from "./steam-manager"
 import cron from "node-cron";
 import { getChangesFromRecentGames } from "./steam-manager";
+import * as config from "./config";
 
 
 export async function scheduleTokens() {
-    // CHIPS are scheduled to run at 9AM and 9PM every day, 9,21
-    var task = cron.schedule('0,30 * * * * *', async () =>  {
+    // CHIPS are scheduled to run at 9AM and 9PM every day, 9,21 (default)
+    var task = cron.schedule(config.crontabUpdater, async () =>  {
         console.log('Running Token Generation..');
         const guilds = await DB.dbGetAllGuilds();
 

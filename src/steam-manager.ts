@@ -58,6 +58,14 @@ export async function saveUser(steamID:string, discordID?:string) {
 		return {code: codes.apiError};
 	}
 }
+export async function unassociate(discordID:string) {
+	try {
+		await DB.dbUpdateUserDiscord(discordID, "");
+	} catch (e){
+		console.error("Unassociate User: " + e);
+		return {code: codes.badCall};
+	}
+}
 
 // get a Steam App ID based off the closest match to the game name
 export async function getAppId(gameName: string) {

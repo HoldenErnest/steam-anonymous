@@ -119,6 +119,7 @@ export async function addChannel(channelID:string) {
 }
 function removeActiveChannel(channelID:string) {
     allChannels = allChannels.filter(c => {
+        if (!c) return false;
         return c.id !== channelID;
     });
 }

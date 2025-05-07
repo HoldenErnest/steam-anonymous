@@ -2,7 +2,7 @@
 // Default Modals to be reused on command interactions
 
 import { CommandInteraction, ModalSubmitInteraction, SlashCommandBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
-import { codes, getSteamIDFromDiscord, saveUser } from "./steam-manager";
+import { codes, getSteamIDFromDiscord, saveUser, unassociate } from "./steam-manager";
 
 export async function createTrackingForm(interaction: CommandInteraction, tracking:boolean, discordName?:string, discordID?:string) {
 	var preText = "";
@@ -61,7 +61,7 @@ export async function createAssignForm(interaction: CommandInteraction, discordN
         .setCustomId('trackAssign')
         .setTitle(title);
 
-    const steamIDInput = new TextInputBuilder()
+    const discordIDInput = new TextInputBuilder()
         .setCustomId('username_input')
         .setLabel("Discord ID: ")
         .setPlaceholder('Enter a discord user..')
@@ -69,16 +69,16 @@ export async function createAssignForm(interaction: CommandInteraction, discordN
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-    const gameInput = new TextInputBuilder()
+    const steamIDInput = new TextInputBuilder()
         .setCustomId('steamID_input')
         .setLabel("Steam ID: ")
         .setPlaceholder('Enter a Steam ID..')
         .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        .setRequired(false);
     
     // add fields to modal
-    const firstActionRow = new ActionRowBuilder().addComponents(steamIDInput);
-    const secondActionRow = new ActionRowBuilder().addComponents(gameInput);
+    const firstActionRow = new ActionRowBuilder().addComponents(discordIDInput);
+    const secondActionRow = new ActionRowBuilder().addComponents(steamIDInput);
 
     // Add inputs to the modal
     // @ts-ignore
@@ -88,7 +88,7 @@ export async function createAssignForm(interaction: CommandInteraction, discordN
     try {
         await interaction.showModal(modal);
     } catch (e) {
-        console.error("crying");
+        console.error("Could not show modal");
     }
 }
 
@@ -98,6 +98,14 @@ export async function assignUserResponse(interaction: ModalSubmitInteraction, as
     var response = ""
     const steamID = interaction.fields.getTextInputValue('steamID_input')
     const discordUser = interaction.fields.getTextInputValue('username_input')
+
+    if (steamID == "") {
+        unassociate(discordUser);
+        response = `Discord User no longer unassociated with a steamID`;
+        await interaction.editReply(response);
+        return;
+    }
+
     const userData = await saveUser(steamID, discordUser);
 
     if (userData && userData.hasOwnProperty("code")) {

@@ -16,3 +16,6 @@ export const config = {
   DISCORD_CLIENT_ID,
   STEAM_KEY
 };
+
+// Change to edit how often you want to run updates. Default is 9AM and 9PM ('9,21 * * * *')
+export const crontabUpdater = '9,21 * * * *'

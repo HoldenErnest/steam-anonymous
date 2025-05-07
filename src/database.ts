@@ -21,6 +21,19 @@ const guildsDB = new JSONdb("./database/guilds.json"); // assign channels to eac
 export async function dbSaveUser(steamID:string, model:any) {
     usersDB.set(steamID, model);
 }
+export async function dbUpdateUserDiscord(oldDiscordID:string, newDiscordID:string) {
+    const users = usersDB.JSON();
+    for (const key in users) {
+        if (users[key].hasOwnProperty("discordID")) {
+            if (users[key].discordID == oldDiscordID) {
+                var user = usersDB.get(key);
+                user.discordID = newDiscordID;
+                usersDB.delete(key);
+            }
+        }
+    }
+    
+}
 
 export async function dbGetUserFromSteam(steamID:string) {
     if(!usersDB.has(steamID)) return false;
